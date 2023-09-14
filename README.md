@@ -1,3 +1,96 @@
+# iPSC_tracking
+
+# create the environment
+
+### This is for Linux
+```bash
+# Make sure you have the right python version downloaded
+python --version
+
+# Create the virtual environment
+python -m venv venv
+
+# activate virtual environment
+source venv/bin/activate
+
+# update package manager and download required packages ... 
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+```
+### This is for Windows
+```
+python -m venv venv
+venv/Scripts/activate
+
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+# Segmenting a fluorescence image
+
+To segment the fluorescence channel, you need to use the routines Threshold and FogBank in the segmentation folder. 
+
+If you already have a thresholded mask, then only run the fogbank section below with the mask as input. 
+
+FYI - You can also use a different image to do the distance transform by specifying img_to_transform in the Fogbank.run routine. This can be the fluorescence image. The image should be a uint8.
+
+```python
+from cell_tracker.segmentation import Fogbank, Threshold
+import skimage.io as skio
+
+# Load the image at specified path
+img        = skio.imread(path_to_image)
+
+# Threshold the image
+thresh_parms = {
+    'sigma':        1,
+    'boxcar_size':  26,
+    'thresh':       1e2,
+
+}
+img_thresh = Threshold(img, **thresh_parms).run()
+
+# Segment the image 
+fb_parms = {
+    'min_size':         10, 
+    'min_object_size':  80, 
+    'erode_size':       3, 
+
+}
+img_seg    = FogBank(img, **fb_parms).run(img_to_transform = None)
+
+```
+
+# Launching Cell Tracker
+This section shows how to launch the cell tracker on a collection of images ...
+```python
+tracker_parms = {
+    'mem':         		5,    # maximum amount of time an object can be unmapped
+    'max_disp':    		20,   # max separation
+    'min_overlap': 		0.05, # min mask overlap
+    'limits':      		[],   # this crops the image
+    'min_object_size': 	80,   # minimum object size
+}
+
+kwargs = {
+    'root': '/mnt/x/exp0.0', # root is the relative path for all files. 
+    'image_folder': 'phase_inferenced_processed', # Folder with the labeled images.
+    'mitosis_filename': 'xyt_divisions.pkl', # filename with mitosis xyt.
+    'tracker_parms': tracker_parms, # Tracking parameters
+    't0': 0, # Initial frame
+    'dt': 1, # time resolution - be careful with mitosis detection time resolution
+    'tf': 700, # final frame
+}
+
+# This will run the cell tracker
+from cell_tracker.tracker import CellTrackerLauncher as CTL
+ctl = CTL(**kwargs)
+ctl.run(save_filename = 'tracks')
+```
+
+
+
+
 # NIST Open-Source Software Repository Template
 
 Use of GitHub by NIST employees for government work is subject to
